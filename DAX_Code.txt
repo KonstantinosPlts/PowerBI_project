@@ -1,0 +1,65 @@
+TABLE DATE
+
+Date = CALENDARAUTO()
+Day = DAY('Date'[Date])
+Month = FORMAT('Date'[Date],"MMM")
+MonthNum = MONTH('Date'[Date])
+Quarter = "Q" & FORMAT(QUARTER('Date'[Date]),"")
+Year = YEAR('Date'[Date])
+YearMonth = FORMAT('Date'[Date],"YYYY-MM")
+DatesWithTransactions = 'Date'[Date] <= MAX(transactions[Date])
+
+TABLE METRICS
+
+Transaction Amount = SUM(transactions[Amount])
+Expenses = CALCULATE (
+                                            [Transaction Amount],
+                                            FILTER(transactions, transactions[Transaction Type]="debit"),
+                                            Category[Category] <> "transfer",
+                                            Category[Category] <> "Credit Card Payment"
+                                           )
+Expenses Final = DIVIDE([Expenses],100)
+Income = CALCULATE (
+                                        [Transaction Amount],
+                                        FILTER(transactions, transactions[Transaction Type]="credit"),
+                                        Category[Category] <> "transfer",
+                                        Category[Category] <> "Credit Card Payment"
+                       )
+Net Income = [Income]-[Expenses Final]
+Income YTD = CALCULATE (
+                                                [Income], 
+                                                CALCULATETABLE (
+                                                                                 DATESYTD('Date'[Date]),
+                                                                                 'Date'[DatesWithTransactions]=TRUE
+                                                                                  )
+                                                 )
+Expenses YTD = CALCULATE (
+                                                   [Expenses Final], 
+                                                   CALCULATETABLE (
+                                                                                    DATESYTD('Date'[Date]),
+                                                                                    'Date'[DatesWithTransactions]=TRUE
+                                                                                     )
+                                                    )
+Net Income YTD = CALCULATE (
+                                                        [Net Income], 
+                                                        CALCULATETABLE (
+                                                                                         DATESYTD('Date'[Date]),
+                                                                                         'Date'[DatesWithTransactions]=TRUE
+                                                                                          )
+                                                        )
+Income Py = CALCULATE ( [Income],SAMEPERIODLASTYEAR('Date'[Date]) )
+Expenses Py = CALCULATE ( [Expenses Final],SAMEPERIODLASTYEAR('Date'[Date]) )
+Income Py YTD = CALCULATE ( [Income YTD], SAMEPERIODLASTYEAR('Date'[Date]) ) 
+Expenses Py YTD = CALCULATE ( [Expenses YTD], SAMEPERIODLASTYEAR('Date'[Date]) )
+Budget Amt = CALCULATE (
+                                               SUM('Monthly Budget'[Budget]),
+                                               USERELATIONSHIP (
+                                                                                   'Date'[YearMonth],'Monthly Budget'[YearMonth]
+                                                                                  )
+                                                 )
+
+TABLE MONTHLY BUDGET
+
+Monthly Budget = CROSSJOIN ( SUMMARIZE('Date', 'Date'[YearMonth]),Budget )
+Budget Amt = SUM ('Monthly Budget'[Budget] )
+
